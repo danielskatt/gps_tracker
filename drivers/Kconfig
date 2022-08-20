@@ -1,3 +1,5 @@
+comment "Device Drivers"
+
 rsource "adc/Kconfig"
 rsource "gnss/Kconfig"
 rsource "gsm/Kconfig"

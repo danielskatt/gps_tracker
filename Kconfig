@@ -1,0 +1,20 @@
+# GPS Module
+
+mainmenu "GPS module"
+
+rsource "src/Kconfig"
+rsource "drivers/Kconfig"
+
+########################################################################
+# GNSS (Global Navigation Satellite Systems)
+########################################################################
+
+config GNSS
+    bool "GNSS enabled"
+    default n
+    help
+        Set this config to enable the GNSS tracker
+
+menu "Zephyr Kernel"
+source "Kconfig.zephyr"
+endmenu

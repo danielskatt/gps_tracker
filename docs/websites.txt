@@ -1,0 +1,14 @@
+Websites for Nordic Thingy:91
+
+Getting started
+https://developer.nordicsemi.com/nRF_Connect_SDK/doc/latest/nrf/ug_thingy91_gsg.html
+https://www.nordicsemi.com/Products/Development-hardware/Nordic-Thingy-91/GetStarted?lang=en#infotabs
+
+Developing Thingy:91
+https://developer.nordicsemi.com/nRF_Connect_SDK/doc/latest/nrf/ug_thingy91.html#ug-thingy91
+
+Install manually
+https://developer.nordicsemi.com/nRF_Connect_SDK/doc/latest/nrf/gs_installing.html#build-environment-cli
+
+
+https://developer.nordicsemi.com/nRF_Connect_SDK/doc/latest/nrf/ug_thingy91.html#ug-thingy91
