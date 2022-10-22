@@ -1,0 +1,4 @@
+add_subdirectory_ifdef(CONFIG_GNSS gnss_module)
+add_subdirectory(led_module)
+add_subdirectory(events)
+add_subdirectory(common_modules)

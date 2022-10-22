@@ -1,0 +1,10 @@
+comment "gnss module"
+
+config CONFIG_GNSS_MODULE_LOG_LEVEL
+    int "Log level [0, 4]"
+    default 4
+    help
+      Set this config entry to log data from gnss module [0, 4].
+
+module = GNSS_MODULE
+module-str = GNSS module
