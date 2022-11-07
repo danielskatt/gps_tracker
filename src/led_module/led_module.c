@@ -59,14 +59,14 @@ static void led_module_thread(void)
         //     default:
         //         break;
         // }
-        k_msleep(1);
+        k_msleep(1000);
     }
 }
 
 
-#define LED_MODULE_THREAD_STACK_SIZE    1024
+#define LED_MODULE_THREAD_STACK_SIZE    2048
 #define LED_MODULE_THREAD_PRIORITY      7
 
-K_THREAD_DEFINE(led_module_thread_id, LED_MODULE_THREAD_STACK_SIZE,
-  led_module_thread, NULL, NULL, NULL,
-  K_PRIO_PREEMPT(LED_MODULE_THREAD_PRIORITY), 0, 0);
+// K_THREAD_DEFINE(led_module_thread_id, LED_MODULE_THREAD_STACK_SIZE,
+//   led_module_thread, NULL, NULL, NULL,
+//   K_PRIO_PREEMPT(LED_MODULE_THREAD_PRIORITY), 0, 0);

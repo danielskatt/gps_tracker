@@ -1,6 +1,6 @@
 comment "gnss module"
 
-config CONFIG_GNSS_MODULE_LOG_LEVEL
+config GNSS_MODULE_LOG_LEVEL
     int "Log level [0, 4]"
     default 4
     help

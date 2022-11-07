@@ -20,14 +20,14 @@ int gnss_unset_power_saving_mode(void);
  *
  * @return int
  */
-int gnss_start(void);
+int gnss_stop(void);
 
 /**
  * @brief
  *
  * @return int
  */
-int gnss_stop(void);
+int gnss_start_search(void);
 
 /**
  * @brief

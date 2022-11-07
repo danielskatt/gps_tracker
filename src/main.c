@@ -72,7 +72,9 @@ int main(void)
         return -1;
     }
 
-    k_timer_start(&data_sample_timer, K_SECONDS(5), K_SECONDS(30));
+    k_msleep(2000);
+
+    SEND_EVENT(app, APP_EVT_DATA_GET);
 
     while (1) {
         // TODO: Handle event

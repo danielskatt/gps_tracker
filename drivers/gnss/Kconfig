@@ -12,21 +12,3 @@ config LOG_LEVEL_GNSS
     default 0
     help
       Set this config entry to log data from GNSS [0, 4]
-
-choice GNSS_MODULE_DATA_FORMAT
-    prompt "Select GNSS data format"
-    default GNSS_MODULE_NMEA
-
-config GNSS_MODULE_PVT
-    bool "Include PVT data in GNSS fix event"
-    help
-      PVT stands for position, velocity, and time.
-      The GNSS data will be included as a struct in the GNSS_EVT_DATA_READY event propagated by this module upon a fix.
-
-config GNSS_MODULE_NMEA
-    bool "Include NMEA data in GNSS fix event"
-    help
-      NMEA is a defined ASCII representation of GNSS data.
-      The GNSS data will be included as a string in the GNSS_EVT_DATA_READY event.
-
-endchoice
