@@ -1,7 +1,5 @@
 comment "src"
 
-rsource "common_modules/Kconfig"
-rsource "events/Kconfig"
 rsource "gnss_module/Kconfig"
 rsource "led_module/Kconfig"
 

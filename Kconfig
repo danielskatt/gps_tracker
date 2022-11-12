@@ -6,10 +6,6 @@
 
 menu "GPS module"
 
-    config MODULES_COMMON_LOG_LEVEL
-        int "Log level common"
-        default 4
-
     config GNSS
         bool "GNSS enabled"
         default n
@@ -19,27 +15,26 @@ menu "GPS module"
     choice
         default GNSS_SAMPLE_MODE_CONTINUOUS
         prompt "Select GNSS operation mode"
-    
+
     config GNSS_SAMPLE_MODE_CONTINUOUS
         bool "Continuous tracking"
-    
+
     config GNSS_SAMPLE_MODE_PERIODIC
         bool "Periodic fixes"
-    
+
     config GNSS_SAMPLE_MODE_TTFF_TEST
         bool "Time-to-first-fix (TTFF) test mode"
         select GNSS_SAMPLE_NMEA_ONLY
-    
+
     endchoice
-    
-    
+
 config GNSS_SAMPLE_PERIODIC_INTERVAL
     int "Fix interval for periodic fixes"
     range 10 65535
     default 120
     help
       Fix interval (in seconds) for periodic fixes.
-    
+
 config GNSS_SAMPLE_PERIODIC_TIMEOUT
     int "Fix timeout for periodic fixes"
     range 0 65535
@@ -48,14 +43,14 @@ config GNSS_SAMPLE_PERIODIC_TIMEOUT
       Fix timeout (in seconds) for periodic fixes.
       If set to zero, GNSS is allowed to run indefinitely until a valid PVT estimate is produced.
 
-    
+
     if GNSS_SAMPLE_MODE_TTFF_TEST
-    
+
     config GNSS_SAMPLE_MODE_TTFF_TEST_COLD_START
         bool "Delete GNSS data before each start (cold start)"
         help
           When enabled, deletes all stored data from GNSS to force a cold start every time GNSS is started.
-    
+
     config GNSS_SAMPLE_MODE_TTFF_TEST_INTERVAL
         int "Time to wait between TTFF tests in seconds"
         range 1 604800

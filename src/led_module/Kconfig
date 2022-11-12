@@ -1,1 +1,8 @@
 comment "led module"
+
+config LED_MODULE_THREAD_SLEEP_MS
+    int "LED module thread sleep [ms]"
+    range 1 1000
+    default 10
+    help
+        The time the led module thread sleeps
