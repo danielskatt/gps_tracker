@@ -1,6 +1,5 @@
 #include <zephyr/kernel.h>
 #include <zephyr/sys/reboot.h>
-#include <app_event_manager.h>
 #include <zephyr/logging/log.h>
 #include <zephyr/logging/log_ctrl.h>
 
