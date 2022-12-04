@@ -15,11 +15,15 @@ LOG_MODULE_REGISTER(MODULE, CONFIG_GNSS_MODULE_LOG_LEVEL);
 
 static struct nrf_modem_gnss_nmea_data_frame nmea_data;
 static struct nrf_modem_gnss_pvt_data_frame pvt_data;
+static const char update_indicator[] = { '\\', '|', '/', '-' };
 
 K_MSGQ_DEFINE(event_msgq, sizeof(int), 10, 4);
 
-static const char update_indicator[] = { '\\', '|', '/', '-' };
-
+/**
+ * @brief Start a search sequence to search for GNSS position
+ *
+ * @return int 0 on success, negative on fail
+ */
 static int gnss_start_search(void)
 {
     int retval = 0;
@@ -51,9 +55,9 @@ static int gnss_start_search(void)
 
 
 /**
- * @brief
+ * @brief Put an event from the GNSS driver to the message queue
  *
- * @param event
+ * @param event the event received from the gnss driver
  */
 static void gnss_event_handler(int event)
 {
@@ -61,56 +65,41 @@ static void gnss_event_handler(int event)
 
     retval = k_msgq_put(&event_msgq, &event, K_NO_WAIT);
     if (retval) {
-        LOG_ERR("Failed to but GNSS event to message queue!");
+        LOG_ERR("%s: Failed to but GNSS event to message queue!", __func__);
     }
 }
 
 
-static int gnss_init(void)
-{
-    int retval = 0;
-
-    retval = lte_lc_init();
-    if (0 != retval) {
-        LOG_WRN("Failed to init LTE link controller\n");
-        return retval;
-    }
-
-    retval = lte_lc_system_mode_set(LTE_LC_SYSTEM_MODE_GPS, LTE_LC_SYSTEM_MODE_PREFER_AUTO);
-    if (0 != retval) {
-        LOG_WRN("Failed to activate GNSS system mode\n");
-        return retval;
-    }
-
-    retval = lte_lc_func_mode_set(LTE_LC_FUNC_MODE_ACTIVATE_GNSS);
-    if (0 != retval) {
-        LOG_WRN("Failed to activate GNSS functional mode\n");
-        return retval;
-    }
-
-    return retval;
-} /* gnss_init */
-
-
 /**
- * @brief
+ * @brief Init the needed gnss handler and mode to be able to use the GNSS driver
  *
- * @return int
+ * @return int 0 success, negative on fail
  */
 static int gnss_module_init(void)
 {
     int retval = 0;
 
+    /* Set the GNSS driver event handler */
     retval = nrf_modem_gnss_event_handler_set(gnss_event_handler);
-
     if (0 != retval) {
-        LOG_WRN("Failed to set GNSS event handler, retval: %d", retval);
+        LOG_WRN("%s: Failed to set GNSS event handler, retval: %d", __func__, retval);
         return retval;
     }
 
-    retval = gnss_init();
-    if (retval) {
-        LOG_WRN("GNSS driver failed to init");
+    /* Init and set the LTE mode */
+    retval = lte_lc_init();
+    if (0 != retval) {
+        LOG_WRN("%s: Failed to init LTE link controller", __func__);
+        return retval;
+    }
+    retval = lte_lc_system_mode_set(LTE_LC_SYSTEM_MODE_GPS, LTE_LC_SYSTEM_MODE_PREFER_AUTO);
+    if (0 != retval) {
+        LOG_WRN("%s: Failed to activate GNSS system mode", __func__);
+        return retval;
+    }
+    retval = lte_lc_func_mode_set(LTE_LC_FUNC_MODE_ACTIVATE_GNSS);
+    if (0 != retval) {
+        LOG_WRN("%s: Failed to activate GNSS functional mode", __func__);
         return retval;
     }
 
@@ -119,34 +108,42 @@ static int gnss_module_init(void)
 
 
 /**
- * @brief
+ * @brief Print data from a fixed position from the GNSS
  *
  */
 static void print_fix_data(void)
 {
-    printk("Latitude:       %.06f\n", pvt_data.latitude);
-    printk("Longitude:      %.06f\n", pvt_data.longitude);
-    printk("Altitude:       %.01f m\n", pvt_data.altitude);
-    printk("Accuracy:       %.01f m\n", pvt_data.accuracy);
-    printk("Speed:          %.01f m/s\n", pvt_data.speed);
-    printk("Speed accuracy: %.01f m/s\n", pvt_data.speed_accuracy);
-    printk("Heading:        %.01f deg\n", pvt_data.heading);
-    printk("Date:           %04u-%02u-%02u\n", pvt_data.datetime.year, pvt_data.datetime.month, pvt_data.datetime.day);
-    printk("Time (UTC):     %02u:%02u:%02u.%03u\n", pvt_data.datetime.hour, pvt_data.datetime.minute,
+    /* Clear screen */
+    LOG_DBG("\033[1;1H");
+    LOG_DBG("\033[2J");
+
+    LOG_DBG("Latitude:       %.06f", pvt_data.latitude);
+    LOG_DBG("Longitude:      %.06f", pvt_data.longitude);
+    LOG_DBG("Altitude:       %.01f m", pvt_data.altitude);
+    LOG_DBG("Accuracy:       %.01f m", pvt_data.accuracy);
+    LOG_DBG("Speed:          %.01f m/s", pvt_data.speed);
+    LOG_DBG("Speed accuracy: %.01f m/s", pvt_data.speed_accuracy);
+    LOG_DBG("Heading:        %.01f deg", pvt_data.heading);
+    LOG_DBG("Date:           %04u-%02u-%02u", pvt_data.datetime.year, pvt_data.datetime.month, pvt_data.datetime.day);
+    LOG_DBG("Time (UTC):     %02u:%02u:%02u.%03u", pvt_data.datetime.hour, pvt_data.datetime.minute,
       pvt_data.datetime.seconds, pvt_data.datetime.ms);
-    printk("PDOP:           %.01f\n", pvt_data.pdop);
-    printk("HDOP:           %.01f\n", pvt_data.hdop);
-    printk("VDOP:           %.01f\n", pvt_data.vdop);
-    printk("TDOP:           %.01f\n", pvt_data.tdop);
+    LOG_DBG("PDOP:           %.01f", pvt_data.pdop);
+    LOG_DBG("HDOP:           %.01f", pvt_data.hdop);
+    LOG_DBG("VDOP:           %.01f", pvt_data.vdop);
+    LOG_DBG("TDOP:           %.01f", pvt_data.tdop);
 }
 
 
 /**
- * @brief
+ * @brief Print the current stats when searching for GNSS position
  *
  */
 static void print_pvt(void)
 {
+    /* Clear screen */
+    LOG_DBG("\033[1;1H");
+    LOG_DBG("\033[2J");
+
     if (pvt_data.sv[0].sv == 0) {
         LOG_DBG("No tracked satellites");
         return;
@@ -156,9 +153,6 @@ static void print_pvt(void)
     uint8_t in_fix = 0;
     uint8_t unhealthy = 0;
     static uint8_t cnt = 0;
-
-    printk("\033[1;1H");
-    printk("\033[2J");
 
     for (int i = 0; i < NRF_MODEM_GNSS_MAX_SATELLITES; ++i) {
         if (pvt_data.sv[i].sv > 0) {
@@ -174,17 +168,18 @@ static void print_pvt(void)
         }
     }
 
-    printk("Tracking: %2d Using: %2d Unhealthy: %d\n", tracked, in_fix, unhealthy);
-    printk("Searching [%c]\n", update_indicator[cnt % 4]);
+    LOG_DBG("Tracking: %2d Using: %2d Unhealthy: %d", tracked, in_fix, unhealthy);
+    LOG_DBG("Searching [%c]", update_indicator[cnt % 4]);
     cnt++;
-}
+} /* print_pvt */
 
 
-/**
- * @brief
- *
- */
-static void gnss_event_handler_thread(void)
+/*************************************************************/
+/* Threads */
+/*************************************************************/
+
+/* Handle events from the application */
+static void gnss_application_event_thread(void)
 {
     int retval = 0;
 
@@ -208,21 +203,18 @@ static void gnss_event_handler_thread(void)
             print_fix_data();
         }
         k_msleep(CONFIG_GNSS_MODULE_THREAD_SLEEP);
-    } /* gnss_event_handler_thread */
-} /* gnss_event_thread */
+    }
+} /* gnss_application_event_thread */
 
 
-#define GNSS_EVENT_HANDLER_THREAD_STACK_SIZE    4096
-#define GNSS_EVENT_HANDLER_THREAD_PRIORITY      7
+#define GNSS_APPLICATION_EVENT_THREAD_STACK_SIZE    4096
+#define GNSS_APPLICATION_EVENT_THREAD_PRIORITY      7
 
-K_THREAD_DEFINE(gnss_event_handler_thread_id, GNSS_EVENT_HANDLER_THREAD_STACK_SIZE,
-  gnss_event_handler_thread, NULL, NULL, NULL,
-  K_PRIO_PREEMPT(GNSS_EVENT_HANDLER_THREAD_PRIORITY), 0, 0);
+K_THREAD_DEFINE(gnss_application_event_thread_id, GNSS_APPLICATION_EVENT_THREAD_STACK_SIZE,
+  gnss_application_event_thread, NULL, NULL, NULL,
+  K_PRIO_PREEMPT(GNSS_APPLICATION_EVENT_THREAD_PRIORITY), 0, 0);
 
-/**
- * @brief
- *
- */
+/* Handle events from the GNSS driver */
 static void gnss_event_thread(void)
 {
     int retval = 0;
@@ -238,17 +230,16 @@ static void gnss_event_thread(void)
             case NRF_MODEM_GNSS_EVT_PVT:
                 retval = nrf_modem_gnss_read(&pvt_data, sizeof(struct nrf_modem_gnss_pvt_data_frame),
                     NRF_MODEM_GNSS_DATA_PVT);
-                if (retval) {
+                if (0 != retval) {
+                    LOG_WRN("%s: Failed to read from the gnss modem!", __func__);
                     break;
                 }
-
                 if (pvt_data.flags & NRF_MODEM_GNSS_PVT_FLAG_FIX_VALID) {
                     gnss_fixed = true;
                     k_event_post(&app_events, APP_EVENT_GNSS_POSITION_FIXED);
                 } else {
                     print_pvt();
                 }
-
                 break;
             case NRF_MODEM_GNSS_EVT_NMEA:
                 if (IS_ENABLED(CONFIG_GNSS_MODULE_PVT) && gnss_fixed) {

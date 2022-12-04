@@ -18,16 +18,10 @@ static void led_search_timer_fn(struct k_timer *timer_id)
 
 static K_TIMER_DEFINE(led_search_timer, led_search_timer_fn, NULL);
 
-/**
- * @brief
- *
- */
+/* Thread for handling LED based on application events */
 static void led_module_thread(void)
 {
-    int retval = 0;
-
-    retval = led_init();
-    if (0 != retval) {
+    if (0 != led_init()) {
         return;
     }
 
@@ -35,7 +29,7 @@ static void led_module_thread(void)
 
     while (true) {
         if (0 < k_event_wait(&app_events, APP_EVENT_GNSS_SEARCH, 0, K_NO_WAIT)) {
-            k_timer_start(&led_search_timer, K_MSEC(1), K_MSEC(1000));
+            k_timer_start(&led_search_timer, K_MSEC(1000), K_MSEC(1000));
         }
 
         if (0 < k_event_wait(&app_events, APP_EVENT_GNSS_POSITION_FIXED, 0, K_NO_WAIT)) {
@@ -48,7 +42,7 @@ static void led_module_thread(void)
 } /* led_module_thread */
 
 
-#define LED_MODULE_THREAD_STACK_SIZE    2048
+#define LED_MODULE_THREAD_STACK_SIZE    1024
 #define LED_MODULE_THREAD_PRIORITY      7
 
 K_THREAD_DEFINE(led_module_thread_id, LED_MODULE_THREAD_STACK_SIZE,
