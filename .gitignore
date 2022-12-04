@@ -4,3 +4,5 @@ build
 # Mac specific
 .icloud
 .DS_Store
+
+.vscode
