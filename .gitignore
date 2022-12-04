@@ -1,8 +1,11 @@
 # Generated
-build
+build/
 
 # Mac specific
 .icloud
 .DS_Store
 
-.vscode
+# Vscode settings file
+.vscode/*
+!vscode/extensions.json
+!vscode/launch.json
