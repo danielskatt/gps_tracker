@@ -1,0 +1,7 @@
+{
+    "files.associations": {
+        "gnss.h": "c",
+        "app_module_event.h": "c"
+    },
+    "cmake.configureOnOpen": false
+}

@@ -1,20 +1,155 @@
-# GPS Module
+comment "GPS module"
 
-mainmenu "GPS module"
+###############################
+# Application specific
+###############################
 
-rsource "src/Kconfig"
-rsource "drivers/Kconfig"
-
-########################################################################
-# GNSS (Global Navigation Satellite Systems)
-########################################################################
-
-config GNSS
+config LED
     bool "GNSS enabled"
     default n
     help
-        Set this config to enable the GNSS tracker
+        Set this config to enable the LED module
+
+###############################
+# GNSS specific
+###############################
+
+choice
+    default GNSS_SAMPLE_MODE_CONTINUOUS
+    prompt "Select GNSS operation mode"
+
+    config GNSS_SAMPLE_MODE_CONTINUOUS
+        bool "Continuous tracking"
+
+    config GNSS_SAMPLE_MODE_PERIODIC
+        bool "Periodic fixes"
+
+    config GNSS_SAMPLE_MODE_TTFF_TEST
+        bool "Time-to-first-fix (TTFF) test mode"
+        select GNSS_SAMPLE_NMEA_ONLY
+endchoice
+
+config GNSS_SAMPLE_PERIODIC_INTERVAL
+    int "Fix interval for periodic fixes"
+    range 10 65535
+    default 120
+    help
+      Fix interval (in seconds) for periodic fixes.
+
+config GNSS_SAMPLE_PERIODIC_TIMEOUT
+    int "Fix timeout for periodic fixes"
+    range 0 65535
+    default 120
+    help
+      Fix timeout (in seconds) for periodic fixes.
+      If set to zero, GNSS is allowed to run indefinitely until a valid PVT estimate is produced.
+
+
+if GNSS_SAMPLE_MODE_TTFF_TEST
+
+    config GNSS_SAMPLE_MODE_TTFF_TEST_COLD_START
+        bool "Delete GNSS data before each start (cold start)"
+        help
+          When enabled, deletes all stored data from GNSS to force a cold start every time GNSS is started.
+
+    config GNSS_SAMPLE_MODE_TTFF_TEST_INTERVAL
+        int "Time to wait between TTFF tests in seconds"
+        range 1 604800
+        default 120
+    
+endif # GNSS_SAMPLE_MODE_TTFF_TEST
+    
+config GNSS_SAMPLE_NMEA_ONLY
+    bool "Output only NMEA strings"
+    help
+      Outputs only NMEA strings from the GNSS.
+    
+choice
+    default GNSS_SAMPLE_ASSISTANCE_NONE
+    prompt "Select whether GNSS assistance is used or not"
+    
+    config GNSS_SAMPLE_ASSISTANCE_NONE
+        bool "Assistance not used"
+    
+    config GNSS_SAMPLE_ASSISTANCE_SUPL
+        bool "Use SUPL A-GPS"
+        select SUPL_CLIENT_LIB
+    
+    config GNSS_SAMPLE_ASSISTANCE_MINIMAL
+        bool "Use factory almanac, LTE network time and MCC based location"
+        select GNSS_SAMPLE_LTE_ON_DEMAND
+        select SETTINGS
+        select FCB
+        select FLASH
+        select FLASH_MAP
+    
+endchoice
+    
+if !GNSS_SAMPLE_ASSISTANCE_NONE
+    
+    config GNSS_SAMPLE_LTE_ON_DEMAND
+        bool "LTE is activated only when needed to fetch A-GPS data"
+        depends on !NRF_CLOUD_PGPS
+        help
+          Activates LTE only when it is needed to fetch A-GPS data. This is not supported when
+          P-GPS is enabled.
+    
+endif # !GNSS_SAMPLE_ASSISTANCE_NONE
+    
+if GNSS_SAMPLE_MODE_CONTINUOUS
+    
+    choice
+        default GNSS_SAMPLE_POWER_SAVING_DISABLED
+        prompt "Select GNSS power saving mode (duty-cycling)"
+    
+        config GNSS_SAMPLE_POWER_SAVING_DISABLED
+            bool "No power saving"
+        
+        config GNSS_SAMPLE_POWER_SAVING_MODERATE
+            bool "Power saving without significant performance degradation"
+        
+        config GNSS_SAMPLE_POWER_SAVING_HIGH
+            bool "Power saving with acceptable performance degradation"
+    
+    endchoice
+    
+endif # GNSS_SAMPLE_MODE_CONTINUOUS
+    
+config GNSS_SAMPLE_REFERENCE_LATITUDE
+    string "Reference position latitude in decimal degrees"
+    help
+      When set, the sample calculates the distance from the reference position for each fix.
+      Given in decimal degrees (DD), for example "61.500000".
+    
+config GNSS_SAMPLE_REFERENCE_LONGITUDE
+    string "Reference position longitude in decimal degrees"
+    help
+      When set, the sample calculates the distance from the reference position for each fix.
+      Given in decimal degrees (DD), for example "23.800000".
+    
+config GNSS_SAMPLE_LOW_ACCURACY
+    bool "Allow low accuracy fixes"
+    help
+      Allows fixes with lower accuracy.
+    
+if GNSS_SAMPLE_ASSISTANCE_MINIMAL && GNSS_SAMPLE_LOW_ACCURACY
+    
+    config GNSS_SAMPLE_ASSISTANCE_REFERENCE_ALT
+        int "Reference altitude for 3-sat first fix in meters"
+        range -32767 32767
+        default -32767
+        help
+          Reference altitude for 3-sat first fix in meters above the reference ellipsoid surface.
+          The default value -32767 implies that reference altitude is not injected.
+    
+endif # GNSS_SAMPLE_ASSISTANCE_MINIMAL && GNSS_SAMPLE_LOW_ACCURACY
+    
+rsource "src/Kconfig"
+rsource "drivers/Kconfig"
 
 menu "Zephyr Kernel"
-source "Kconfig.zephyr"
+    source "Kconfig.zephyr"
 endmenu
+
+module = GPS_MODOULE
+module-str = GPS module

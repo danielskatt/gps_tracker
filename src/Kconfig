@@ -1,0 +1,10 @@
+comment "src"
+
+rsource "gnss_module/Kconfig"
+rsource "led_module/Kconfig"
+
+config APPLICATION_MODULE_LOG_LEVEL
+    int "Log level [0,4]"
+    default 0
+    help
+        Set this config entry to log data from application module
