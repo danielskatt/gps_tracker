@@ -1,7 +1,8 @@
 {
     "files.associations": {
         "gnss.h": "c",
-        "app_module_event.h": "c"
+        "app_module_event.h": "c",
+        "accelerometer.h": "c"
     },
     "cmake.configureOnOpen": false
 }

@@ -10,6 +10,8 @@ project(gps_tracker)
 # Add include path for #include statements for submodules/.../xx.h
 include_directories(.)
 
+zephyr_include_directories(boards/thingy91_nrf9160)
+
 # ---------------------------------------------------------------------------------------
 # Build targets
 # ---------------------------------------------------------------------------------------

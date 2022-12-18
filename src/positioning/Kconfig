@@ -1,12 +1,12 @@
-comment "gnss module"
+comment "positioning"
 
-config GNSS_MODULE_LOG_LEVEL
+config POSITIONING_LOG_LEVEL
     int "Log level [0, 4]"
     default 4
     help
       Set this config entry to log data from gnss module [0, 4].
 
-config GNSS_MODULE_THREAD_SLEEP
+config POSITIONING_THREAD_SLEEP
     int "Time the thread sleeps [ms]"
     default 10
     help
