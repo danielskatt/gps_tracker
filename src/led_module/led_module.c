@@ -2,6 +2,8 @@
 #include "src/lib/common_events.h"
 #include "drivers/led/led.h"
 
+static bool led_searching = false;
+
 static void led_search_work_fn(struct k_work *work)
 {
     led_blue_state_toggle();
@@ -25,15 +27,27 @@ static void led_module_thread(void)
         return;
     }
 
-    k_event_wait(&app_events, APP_EVENT_GNSS_INITIALIZED, 0, K_FOREVER);
+    k_event_wait(&app_events, APP_EVENT_GNSS_INITIALIZED | APP_EVENT_MOVEMENT_INITIALIZED, 0, K_FOREVER);
+
+    led_green_state_set(1);
+    k_msleep(50);
+    led_green_state_set(0);
+    k_msleep(50);
+    led_green_state_set(1);
+    k_msleep(50);
+    led_green_state_set(0);
 
     while (true) {
-        if (0 < k_event_wait(&app_events, APP_EVENT_GNSS_SEARCH, 0, K_NO_WAIT)) {
-            k_timer_start(&led_search_timer, K_MSEC(1000), K_MSEC(1000));
+        if (0 < k_event_wait(&app_events, APP_EVENT_GNSS_SEARCHING, 0, K_NO_WAIT)) {
+            if (0 == led_searching) {
+                k_timer_start(&led_search_timer, K_MSEC(1000), K_MSEC(1000));
+                led_searching = true;
+            }
         }
 
         if (0 < k_event_wait(&app_events, APP_EVENT_GNSS_POSITION_FIXED, 0, K_NO_WAIT)) {
             k_timer_stop(&led_search_timer);
+            led_searching = false;
             led_blue_state_set(0);
             led_green_state_set(1);
         }

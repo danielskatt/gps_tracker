@@ -1,6 +1,7 @@
 comment "src"
 
-rsource "gnss_module/Kconfig"
+rsource "positioning/Kconfig"
+rsource "movement/Kconfig"
 rsource "led_module/Kconfig"
 
 config APPLICATION_MODULE_LOG_LEVEL

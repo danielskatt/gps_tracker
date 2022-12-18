@@ -1,0 +1,13 @@
+comment "movement"
+
+config MOVEMENT_LOG_LEVEL
+    int "Log level [0, 4]"
+    default 0
+    help
+      Set this config entry to log data from movement module [0, 4].
+
+config MOVEMENT_THREAD_SLEEP
+    int "Time the thread sleeps [ms]"
+    default 100
+    help
+      Set this config entry to set how long the thread will sleep.

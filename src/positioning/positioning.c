@@ -11,7 +11,7 @@
 #define MODULE  gnss_module
 
 #include <zephyr/logging/log.h>
-LOG_MODULE_REGISTER(MODULE, CONFIG_GNSS_MODULE_LOG_LEVEL);
+LOG_MODULE_REGISTER(MODULE, CONFIG_POSITIONING_LOG_LEVEL);
 
 static struct nrf_modem_gnss_nmea_data_frame nmea_data;
 static struct nrf_modem_gnss_pvt_data_frame pvt_data;
@@ -27,6 +27,8 @@ K_MSGQ_DEFINE(event_msgq, sizeof(int), 10, 4);
 static int gnss_start_search(void)
 {
     int retval = 0;
+
+    k_event_post(&app_events, APP_EVENT_GNSS_SEARCHING);
 
     retval |= nrf_modem_gnss_stop();
 
@@ -48,7 +50,7 @@ static int gnss_start_search(void)
 
     retval |= nrf_modem_gnss_start();
 
-    k_event_set_masked(&app_events, 0, ~APP_EVENT_GNSS_SEARCH);
+    k_event_set_masked(&app_events, 0, ~APP_EVENT_GNSS_SEARCH_REQ);
 
     return retval;
 }
@@ -191,7 +193,9 @@ static void gnss_application_event_thread(void)
     k_event_post(&app_events, APP_EVENT_GNSS_INITIALIZED);
 
     while (1) {
-        if (0 < k_event_wait(&app_events, APP_EVENT_GNSS_SEARCH, 0, K_NO_WAIT)) {
+        if (APP_EVENT_GNSS_SEARCH_REQ == k_event_wait(&app_events, APP_EVENT_GNSS_SEARCH_REQ | APP_EVENT_GNSS_SEARCHING,
+          0, K_NO_WAIT))
+        {
             gnss_start_search();
         }
 
@@ -202,7 +206,7 @@ static void gnss_application_event_thread(void)
         if (0 < k_event_wait(&app_events, APP_EVENT_GNSS_POSITION_FIXED, 0, K_NO_WAIT)) {
             print_fix_data();
         }
-        k_msleep(CONFIG_GNSS_MODULE_THREAD_SLEEP);
+        k_msleep(CONFIG_POSITIONING_THREAD_SLEEP);
     }
 } /* gnss_application_event_thread */
 
@@ -236,7 +240,7 @@ static void gnss_event_thread(void)
                 }
                 if (pvt_data.flags & NRF_MODEM_GNSS_PVT_FLAG_FIX_VALID) {
                     gnss_fixed = true;
-                    k_event_post(&app_events, APP_EVENT_GNSS_POSITION_FIXED);
+                    k_event_set_masked(&app_events, APP_EVENT_GNSS_POSITION_FIXED, ~(APP_EVENT_GNSS_SEARCH_REQ));
                 } else {
                     print_pvt();
                 }
@@ -259,7 +263,7 @@ static void gnss_event_thread(void)
             default:
                 break;
         }
-        k_msleep(CONFIG_GNSS_MODULE_THREAD_SLEEP);
+        k_msleep(CONFIG_POSITIONING_THREAD_SLEEP);
     }
 } /* gnss_event_thread */
 

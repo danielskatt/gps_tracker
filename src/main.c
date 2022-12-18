@@ -12,10 +12,6 @@ int main(void)
 {
     k_event_wait(&app_events, APP_EVENT_GNSS_INITIALIZED, 0, K_FOREVER);
 
-    k_msleep(1000);
-
-    k_event_post(&app_events, APP_EVENT_GNSS_SEARCH);
-
     while (1) {
         k_msleep(100);
     }
