@@ -5,6 +5,7 @@
 #include <nrf_modem_at.h>
 #include <nrf_modem_gnss.h>
 #include <modem/lte_lc.h>
+#include <modem/modem_info.h>
 
 #include "src/lib/common_events.h"
 
@@ -16,6 +17,7 @@ LOG_MODULE_REGISTER(MODULE, CONFIG_POSITIONING_LOG_LEVEL);
 static struct nrf_modem_gnss_nmea_data_frame nmea_data;
 static struct nrf_modem_gnss_pvt_data_frame pvt_data;
 static const char update_indicator[] = { '\\', '|', '/', '-' };
+static struct modem_param_info modem_param;
 
 K_MSGQ_DEFINE(event_msgq, sizeof(int), 10, 4);
 
@@ -105,7 +107,37 @@ static int gnss_module_init(void)
         return retval;
     }
 
+    retval = modem_info_init();
+    if (0 != retval) {
+        LOG_WRN("modem_info_init, error: %d", retval);
+        return retval;
+    }
+
+    retval = modem_info_params_init(&modem_param);
+    if (0 != retval) {
+        LOG_WRN("modem_info_params_init, error: %d", retval);
+        return retval;
+    }
+
     return retval;
+} /* gnss_module_init */
+
+
+static void print_battery_voltage(void)
+{
+    int retval = 0;
+
+    retval = modem_info_params_get(&modem_param);
+    if (0 != retval) {
+        LOG_ERR("modem_info_params_get, error: %d", retval);
+        return;
+    }
+
+    /* Clear screen */
+    LOG_DBG("\033[1;1H");
+    LOG_DBG("\033[2J");
+
+    LOG_DBG("Battery voltage: %d mV", modem_param.device.battery.value);
 }
 
 
@@ -205,6 +237,7 @@ static void gnss_application_event_thread(void)
 
         if (0 < k_event_wait(&app_events, APP_EVENT_GNSS_POSITION_FIXED, 0, K_NO_WAIT)) {
             print_fix_data();
+            print_battery_voltage();
         }
         k_msleep(CONFIG_POSITIONING_THREAD_SLEEP);
     }
@@ -226,6 +259,8 @@ static void gnss_event_thread(void)
     static bool gnss_fixed = false;
 
     k_event_wait(&app_events, APP_EVENT_GNSS_INITIALIZED, 0, K_FOREVER);
+
+    LOG_INF("GNSS initialized successfully!");
 
     while (1) {
         k_msgq_get(&event_msgq, &event, K_FOREVER);

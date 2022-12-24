@@ -1,6 +1,5 @@
 comment "Device Drivers"
 
-rsource "adc/Kconfig"
 rsource "gsm/Kconfig"
 rsource "sensor/Kconfig"
 rsource "led/Kconfig"
