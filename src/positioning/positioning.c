@@ -21,6 +21,26 @@ static struct modem_param_info modem_param;
 
 K_MSGQ_DEFINE(event_msgq, sizeof(int), 10, 4);
 
+int positioning_data_get(float *latitude, float *longitude, float *altitude, float *accuracy, int *voltage_level)
+{
+    if (0 == k_event_wait(&app_events, APP_EVENT_GNSS_POSITION_FIXED, 0, K_NO_WAIT)) {
+        return -1;
+    }
+
+    if (0 != modem_info_params_get(&modem_param)) {
+        return -1;
+    }
+
+    *latitude = pvt_data.latitude;
+    *longitude = pvt_data.longitude;
+    *altitude = pvt_data.altitude;
+    *accuracy = pvt_data.accuracy;
+    *voltage_level = modem_param.device.battery.value;
+
+    return 0;
+}
+
+
 /**
  * @brief Start a search sequence to search for GNSS position
  *
@@ -96,16 +116,17 @@ static int gnss_module_init(void)
         LOG_WRN("%s: Failed to init LTE link controller", __func__);
         return retval;
     }
-    retval = lte_lc_system_mode_set(LTE_LC_SYSTEM_MODE_GPS, LTE_LC_SYSTEM_MODE_PREFER_AUTO);
-    if (0 != retval) {
-        LOG_WRN("%s: Failed to activate GNSS system mode", __func__);
-        return retval;
-    }
-    retval = lte_lc_func_mode_set(LTE_LC_FUNC_MODE_ACTIVATE_GNSS);
-    if (0 != retval) {
-        LOG_WRN("%s: Failed to activate GNSS functional mode", __func__);
-        return retval;
-    }
+
+    // retval = lte_lc_system_mode_set(LTE_LC_SYSTEM_MODE_LTEM_GPS, LTE_LC_SYSTEM_MODE_PREFER_AUTO);
+    // if (0 != retval) {
+    //     LOG_WRN("%s: Failed to activate GNSS system mode", __func__);
+    //     return retval;
+    // }
+    // retval = lte_lc_func_mode_set(LTE_LC_FUNC_MODE_ACTIVATE_GNSS);
+    // if (0 != retval) {
+    //     LOG_WRN("%s: Failed to activate GNSS functional mode", __func__);
+    //     return retval;
+    // }
 
     retval = modem_info_init();
     if (0 != retval) {
@@ -223,6 +244,7 @@ static void gnss_application_event_thread(void)
     }
 
     k_event_post(&app_events, APP_EVENT_GNSS_INITIALIZED);
+    k_event_wait(&app_events, APP_EVENT_APPLICATION_INITIALIZED, 0, K_FOREVER);
 
     while (1) {
         if (APP_EVENT_GNSS_SEARCH_REQ == k_event_wait(&app_events, APP_EVENT_GNSS_SEARCH_REQ | APP_EVENT_GNSS_SEARCHING,
@@ -233,6 +255,7 @@ static void gnss_application_event_thread(void)
 
         if (0 < k_event_wait(&app_events, APP_EVENT_GNSS_STOP, 0, K_NO_WAIT)) {
             nrf_modem_gnss_stop();
+            k_event_set_masked(&app_events, 0, ~APP_EVENT_GNSS_STOP);
         }
 
         if (0 < k_event_wait(&app_events, APP_EVENT_GNSS_POSITION_FIXED, 0, K_NO_WAIT)) {
@@ -275,7 +298,7 @@ static void gnss_event_thread(void)
                 }
                 if (pvt_data.flags & NRF_MODEM_GNSS_PVT_FLAG_FIX_VALID) {
                     gnss_fixed = true;
-                    k_event_set_masked(&app_events, APP_EVENT_GNSS_POSITION_FIXED, ~(APP_EVENT_GNSS_SEARCH_REQ));
+                    k_event_set_masked(&app_events, APP_EVENT_GNSS_POSITION_FIXED, ~(APP_EVENT_GNSS_SEARCHING));
                 } else {
                     print_pvt();
                 }

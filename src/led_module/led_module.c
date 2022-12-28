@@ -20,6 +20,22 @@ static void led_search_timer_fn(struct k_timer *timer_id)
 
 static K_TIMER_DEFINE(led_search_timer, led_search_timer_fn, NULL);
 
+/**
+ * @brief Function to flash green LED indicating system initialized
+ *
+ */
+static void led_module_init_led_set(void)
+{
+    led_green_state_set(1);
+    k_msleep(100);
+    led_green_state_set(0);
+    k_msleep(100);
+    led_green_state_set(1);
+    k_msleep(100);
+    led_green_state_set(0);
+}
+
+
 /* Thread for handling LED based on application events */
 static void led_module_thread(void)
 {
@@ -27,19 +43,14 @@ static void led_module_thread(void)
         return;
     }
 
-    k_event_wait(&app_events, APP_EVENT_GNSS_INITIALIZED | APP_EVENT_MOVEMENT_INITIALIZED, 0, K_FOREVER);
+    k_event_wait(&app_events, APP_EVENT_APPLICATION_INITIALIZED, 0, K_FOREVER);
 
-    led_green_state_set(1);
-    k_msleep(50);
-    led_green_state_set(0);
-    k_msleep(50);
-    led_green_state_set(1);
-    k_msleep(50);
-    led_green_state_set(0);
+    led_module_init_led_set();
 
     while (true) {
         if (0 < k_event_wait(&app_events, APP_EVENT_GNSS_SEARCHING, 0, K_NO_WAIT)) {
             if (0 == led_searching) {
+                led_green_state_set(0);
                 k_timer_start(&led_search_timer, K_MSEC(1000), K_MSEC(1000));
                 led_searching = true;
             }
