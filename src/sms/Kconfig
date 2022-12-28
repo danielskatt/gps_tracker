@@ -1,0 +1,20 @@
+comment "sms"
+
+config SMS_LOG_LEVEL
+    int "Log level [0, 4]"
+    default 4
+    help
+      Set this config entry to log data from gnss module [0, 4].
+
+config SMS_THREAD_SLEEP
+    int "Time the thread sleeps [ms]"
+    default 10
+    help
+      Set this config entry to set how long the thread will sleep.
+
+config SMS_SEND_PHONE_NUMBER
+	string "Phone number, including country code, where the SMS message is sent"
+	default ""
+
+module = SMS_MODULE
+module-str = SMS module

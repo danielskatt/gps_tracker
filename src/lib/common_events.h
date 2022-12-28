@@ -4,13 +4,14 @@
 #include <zephyr.h>
 
 typedef enum {
-    APP_EVENT_GNSS_INITIALIZED     = 1 << 0,
-    APP_EVENT_GNSS_SEARCH_REQ      = 1 << 1,
-    APP_EVENT_GNSS_SEARCHING       = 1 << 2,
-    APP_EVENT_GNSS_STOP            = 1 << 3,
-    APP_EVENT_GNSS_POSITION_FIXED  = 1 << 4,
-    APP_EVENT_MOVEMENT_INITIALIZED = 1 << 5,
-    APP_EVENT_MOVEMENT_TRIGGERED   = 1 << 6,
+    APP_EVENT_GNSS_INITIALIZED        = 1 << 0,
+    APP_EVENT_GNSS_SEARCH_REQ         = 1 << 1,
+    APP_EVENT_GNSS_SEARCHING          = 1 << 2,
+    APP_EVENT_GNSS_STOP               = 1 << 3,
+    APP_EVENT_GNSS_POSITION_FIXED     = 1 << 4,
+    APP_EVENT_SMS_INITIALIZED         = 1 << 5,
+    APP_EVENT_MOVEMENT_TRIGGERED      = 1 << 6,
+    APP_EVENT_APPLICATION_INITIALIZED = 1 << 7,
 } app_events_t;
 
 extern struct k_event app_events;
