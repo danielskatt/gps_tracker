@@ -5,10 +5,16 @@ comment "GPS module"
 ###############################
 
 config LED
-    bool "GNSS enabled"
+    bool "LED enabled"
     default n
     help
         Set this config to enable the LED module
+
+config SMS
+    bool "SMS enabled"
+    default n
+    help
+        Set this config to enable the SMS module
 
 ###############################
 # GNSS specific

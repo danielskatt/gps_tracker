@@ -14,12 +14,35 @@
 #include <zephyr/logging/log.h>
 LOG_MODULE_REGISTER(MODULE, CONFIG_POSITIONING_LOG_LEVEL);
 
+#ifndef CONFIG_SMS
+static const char update_indicator[] = { '\\', '|', '/', '-' };
+#endif
+
 static struct nrf_modem_gnss_nmea_data_frame nmea_data;
 static struct nrf_modem_gnss_pvt_data_frame pvt_data;
-static const char update_indicator[] = { '\\', '|', '/', '-' };
 static struct modem_param_info modem_param;
 
 K_MSGQ_DEFINE(event_msgq, sizeof(int), 10, 4);
+
+int positioning_data_get(float *latitude, float *longitude, float *altitude, float *accuracy, int *voltage_level)
+{
+    if (0 == k_event_wait(&app_events, APP_EVENT_GNSS_POSITION_FIXED, 0, K_NO_WAIT)) {
+        return -1;
+    }
+
+    if (0 != modem_info_params_get(&modem_param)) {
+        return -1;
+    }
+
+    *latitude = pvt_data.latitude;
+    *longitude = pvt_data.longitude;
+    *altitude = pvt_data.altitude;
+    *accuracy = pvt_data.accuracy;
+    *voltage_level = modem_param.device.battery.value;
+
+    return 0;
+}
+
 
 /**
  * @brief Start a search sequence to search for GNSS position
@@ -96,16 +119,18 @@ static int gnss_module_init(void)
         LOG_WRN("%s: Failed to init LTE link controller", __func__);
         return retval;
     }
-    retval = lte_lc_system_mode_set(LTE_LC_SYSTEM_MODE_GPS, LTE_LC_SYSTEM_MODE_PREFER_AUTO);
-    if (0 != retval) {
-        LOG_WRN("%s: Failed to activate GNSS system mode", __func__);
-        return retval;
-    }
-    retval = lte_lc_func_mode_set(LTE_LC_FUNC_MODE_ACTIVATE_GNSS);
-    if (0 != retval) {
-        LOG_WRN("%s: Failed to activate GNSS functional mode", __func__);
-        return retval;
-    }
+
+    /* Why is this out-commented?, not needed? */
+    // retval = lte_lc_system_mode_set(LTE_LC_SYSTEM_MODE_LTEM_GPS, LTE_LC_SYSTEM_MODE_PREFER_AUTO);
+    // if (0 != retval) {
+    //     LOG_WRN("%s: Failed to activate GNSS system mode", __func__);
+    //     return retval;
+    // }
+    // retval = lte_lc_func_mode_set(LTE_LC_FUNC_MODE_ACTIVATE_GNSS);
+    // if (0 != retval) {
+    //     LOG_WRN("%s: Failed to activate GNSS functional mode", __func__);
+    //     return retval;
+    // }
 
     retval = modem_info_init();
     if (0 != retval) {
@@ -122,6 +147,8 @@ static int gnss_module_init(void)
     return retval;
 } /* gnss_module_init */
 
+
+#ifndef CONFIG_SMS
 
 static void print_battery_voltage(void)
 {
@@ -208,6 +235,9 @@ static void print_pvt(void)
 } /* print_pvt */
 
 
+#endif /* ifndef CONFIG_SMS */
+
+
 /*************************************************************/
 /* Threads */
 /*************************************************************/
@@ -216,6 +246,7 @@ static void print_pvt(void)
 static void gnss_application_event_thread(void)
 {
     int retval = 0;
+    uint32_t events = 0;
 
     retval = gnss_module_init();
     if (0 != retval) {
@@ -223,21 +254,28 @@ static void gnss_application_event_thread(void)
     }
 
     k_event_post(&app_events, APP_EVENT_GNSS_INITIALIZED);
+    k_event_wait(&app_events, APP_EVENT_APPLICATION_INITIALIZED, 0, K_FOREVER);
 
     while (1) {
-        if (APP_EVENT_GNSS_SEARCH_REQ == k_event_wait(&app_events, APP_EVENT_GNSS_SEARCH_REQ | APP_EVENT_GNSS_SEARCHING,
-          0, K_NO_WAIT))
-        {
-            gnss_start_search();
+        events = k_event_wait(&app_events, -1, 0, K_FOREVER);
+
+        if (events & APP_EVENT_GNSS_SEARCH_REQ) {
+            /* Only start seaching for position if it is not already searching */
+            if (0 == (events & APP_EVENT_GNSS_SEARCHING)) {
+                gnss_start_search();
+            }
         }
 
-        if (0 < k_event_wait(&app_events, APP_EVENT_GNSS_STOP, 0, K_NO_WAIT)) {
+        if (events & APP_EVENT_GNSS_STOP) {
             nrf_modem_gnss_stop();
+            k_event_set_masked(&app_events, 0, ~(APP_EVENT_GNSS_STOP | APP_EVENT_GNSS_SEARCHING));
         }
 
-        if (0 < k_event_wait(&app_events, APP_EVENT_GNSS_POSITION_FIXED, 0, K_NO_WAIT)) {
+        if (events & APP_EVENT_GNSS_POSITION_FIXED) {
+#ifndef CONFIG_SMS
             print_fix_data();
             print_battery_voltage();
+#endif
         }
         k_msleep(CONFIG_POSITIONING_THREAD_SLEEP);
     }
@@ -275,9 +313,11 @@ static void gnss_event_thread(void)
                 }
                 if (pvt_data.flags & NRF_MODEM_GNSS_PVT_FLAG_FIX_VALID) {
                     gnss_fixed = true;
-                    k_event_set_masked(&app_events, APP_EVENT_GNSS_POSITION_FIXED, ~(APP_EVENT_GNSS_SEARCH_REQ));
+                    k_event_set_masked(&app_events, APP_EVENT_GNSS_POSITION_FIXED, ~(APP_EVENT_GNSS_SEARCHING));
                 } else {
+#ifndef CONFIG_SMS
                     print_pvt();
+#endif
                 }
                 break;
             case NRF_MODEM_GNSS_EVT_NMEA:
@@ -294,6 +334,8 @@ static void gnss_event_thread(void)
             case NRF_MODEM_GNSS_EVT_UNBLOCKED:
                 break;
             case NRF_MODEM_GNSS_EVT_SLEEP_AFTER_TIMEOUT:
+                LOG_INF("%s: GNSS timeout!", __func__);
+                k_event_set_masked(&app_events, 0, ~APP_EVENT_GNSS_SEARCHING);
                 break;
             default:
                 break;
