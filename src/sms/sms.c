@@ -13,11 +13,10 @@
 #include <zephyr/logging/log.h>
 LOG_MODULE_REGISTER(MODULE, CONFIG_SMS_LOG_LEVEL);
 
-static bool movement_triggered = false;
-
 /**
  * @brief Send a sms with current position and voltage level of the device
  *
+ * @return int 0 on success, negative on fail
  */
 static int sms_app_data_send(void)
 {
@@ -31,6 +30,26 @@ static int sms_app_data_send(void)
 
     sprintf(str, "Latitude: %f\nLongitude: %f\nAltitude: %f\nAccuracy: %f\nVoltage level: %d", latitude, longitude,
       altitude, accuracy, voltage_level);
+
+    return sms_send_text(CONFIG_SMS_SEND_PHONE_NUMBER, str);
+}
+
+
+/**
+ * @brief Send if the device is currently searching for position or idle
+ *
+ * @return int 0 on success, negative on fail
+ */
+static int sms_app_log_send(void)
+{
+    char str[150] = { 0 };
+    uint32_t events = k_event_wait(&app_events, -1, 0, K_NO_WAIT);
+
+    if (events & APP_EVENT_APPLICATION_INITIALIZED) {
+        sprintf(str, "Tracker idle");
+    } else {
+        sprintf(str, "Device not initialized!");
+    }
 
     return sms_send_text(CONFIG_SMS_SEND_PHONE_NUMBER, str);
 }
@@ -59,6 +78,10 @@ static void sms_callback(struct sms_data *const data, void *context)
 
         if (0 == strcmp("Status", data->payload)) {
             k_event_post(&app_events, APP_EVENT_GNSS_SEARCH_REQ);
+        }
+
+        if (0 == strcmp("Log", data->payload)) {
+            k_event_post(&app_events, APP_EVENT_SMS_LOG_SEND);
         }
 
         LOG_INF("\nSMS received:\n");
@@ -113,6 +136,8 @@ static int sms_init()
 static void sms_thread(void)
 {
     int ret = 0;
+    uint32_t events = 0;
+    bool movement_triggered_send = true;
 
     if (0 != sms_init()) {
         return;
@@ -122,25 +147,35 @@ static void sms_thread(void)
     k_event_wait(&app_events, APP_EVENT_APPLICATION_INITIALIZED, 0, K_FOREVER);
 
     while (1) {
-        if (0 < k_event_wait(&app_events, APP_EVENT_MOVEMENT_TRIGGERED, 0, K_NO_WAIT)) {
-            if (false == movement_triggered) {
+        events = k_event_wait(&app_events, -1, 0, K_FOREVER);
+
+        if (APP_EVENT_MOVEMENT_TRIGGERED & events) {
+            if (movement_triggered_send) {
                 ret = sms_send_text(CONFIG_SMS_SEND_PHONE_NUMBER, "Movement triggered!");
-                if (0 != ret) {
-                    LOG_INF("sms_send returned err: %d\n", ret);
+                if (0 == ret) {
+                    movement_triggered_send = false;
                 } else {
-                    movement_triggered = true;
+                    LOG_INF("sms_send returned err: %d\n", ret);
                 }
             }
             k_event_set_masked(&app_events, 0, ~APP_EVENT_MOVEMENT_TRIGGERED);
         }
 
-        if (0 < k_event_wait(&app_events, APP_EVENT_GNSS_POSITION_FIXED, 0, K_NO_WAIT)) {
+        if (APP_EVENT_GNSS_POSITION_FIXED & events) {
             ret = sms_app_data_send();
             if (ret) {
-                LOG_INF("sms_send returned err: %d\n", ret);
+                LOG_INF("%d: sms_send returned err: %d\n", __LINE__, ret);
             }
-            movement_triggered = false;
-            k_event_set_masked(&app_events, 0, ~APP_EVENT_GNSS_POSITION_FIXED);
+            movement_triggered_send = true;
+            k_event_set_masked(&app_events, APP_EVENT_GNSS_STOP, ~APP_EVENT_GNSS_POSITION_FIXED);
+        }
+
+        if (APP_EVENT_SMS_LOG_SEND & events) {
+            ret = sms_app_log_send();
+            if (ret) {
+                LOG_INF("%d: sms_send returned err: %d\n", __LINE__, ret);
+            }
+            k_event_set_masked(&app_events, 0, ~APP_EVENT_SMS_LOG_SEND);
         }
 
         k_msleep(CONFIG_SMS_THREAD_SLEEP);

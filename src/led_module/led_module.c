@@ -39,6 +39,8 @@ static void led_module_init_led_set(void)
 /* Thread for handling LED based on application events */
 static void led_module_thread(void)
 {
+    uint32_t events = 0;
+
     if (0 != led_init()) {
         return;
     }
@@ -48,7 +50,9 @@ static void led_module_thread(void)
     led_module_init_led_set();
 
     while (true) {
-        if (0 < k_event_wait(&app_events, APP_EVENT_GNSS_SEARCHING, 0, K_NO_WAIT)) {
+        events = k_event_wait(&app_events, -1, 0, K_FOREVER);
+
+        if (APP_EVENT_GNSS_SEARCHING & events) {
             if (0 == led_searching) {
                 led_green_state_set(0);
                 k_timer_start(&led_search_timer, K_MSEC(1000), K_MSEC(1000));
@@ -56,12 +60,13 @@ static void led_module_thread(void)
             }
         }
 
-        if (0 < k_event_wait(&app_events, APP_EVENT_GNSS_POSITION_FIXED, 0, K_NO_WAIT)) {
+        if (APP_EVENT_GNSS_POSITION_FIXED & events) {
             k_timer_stop(&led_search_timer);
             led_searching = false;
             led_blue_state_set(0);
             led_green_state_set(1);
         }
+
         k_msleep(CONFIG_LED_MODULE_THREAD_SLEEP_MS);
     }
 } /* led_module_thread */
